@@ -1,0 +1,28 @@
+{
+  "name": "my-household-admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.10.5",
+    "@emotion/server": "^11.10.0",
+    "@emotion/styled": "^11.10.5",
+    "@mui/icons-material": "^5.11.0",
+    "@mui/lab": "^5.0.0-alpha.117",
+    "@mui/material": "^5.11.6",
+    "@next/font": "13.1.4",
+    "eslint": "8.32.0",
+    "eslint-config-next": "13.1.4",
+    "eventsource": "^2.0.2",
+    "next": "13.1.4",
+    "pocketbase": "^0.10.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-query": "^3.39.3"
+  }
+}

@@ -1,0 +1,43 @@
+services:
+  pocketbase-db:
+    image: my-household/db
+    build:
+      context: ./backend
+    ports:
+      - 8880:8880
+    networks:
+      - my-household-app
+    volumes:
+      - my-household-db:/usr/src/app/pb_data
+    restart: unless-stopped
+  app:
+    image: node:19-alpine3.16
+    environment:
+      - API_HOST=pocketbase-db:8880
+    ports:
+      - 3000:3000
+    networks:
+      - my-household-app
+    volumes:
+      - ./app:/usr/app
+    working_dir: /usr/app
+    command: npm run dev
+    restart: unless-stopped
+  smtp4dev:
+    image: rnwood/smtp4dev:v3
+    restart: unless-stopped
+    ports:
+      # Change the number before : to the port the web interface should be accessible on
+      - '8500:80'
+    volumes:
+        - smtp4dev-data:/smtp4dev
+    networks:
+      - my-household-app
+    environment:
+      #Specifies the server hostname. Used in auto-generated TLS certificate if enabled.
+      - ServerOptions__HostName=smtp4dev
+networks:
+  my-household-app: {}
+volumes:
+  my-household-db:
+  smtp4dev-data:
