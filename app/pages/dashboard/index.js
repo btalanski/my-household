@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import Link from '../components/Link';
+import Link from '@/components/Link';
 import { useAppContext } from '@/context/AppContext';
 import LayoutUser from '@/components/LayoutUser';
 import Backdrop from '@mui/material/Backdrop';
@@ -35,18 +35,16 @@ export default function Dashboard() {
   }
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{
-        marginTop: 6,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Hello, {authUser?.name}! 👋
-        </Typography>
-      </Box>
-    </Container>
+    <Box sx={{
+      marginTop: 6,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+    }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Hello, {authUser?.name}! 👋
+      </Typography>
+    </Box>
   );
 }
 
