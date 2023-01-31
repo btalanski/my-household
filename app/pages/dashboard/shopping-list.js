@@ -9,7 +9,7 @@ import { useAppContext } from '@/context/AppContext';
 import LayoutUser from '@/components/LayoutUser';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
-import GroceriesDial from '@/components/GroceriesDial';
+import AddAction from '@/components/ShoppingList/AddAction';
 
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -17,14 +17,14 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Checkbox from '@mui/material/Checkbox';
-import { fetchList } from '@/utils/shoppingListCollection';
+import { fetchShoppingList } from '@/utils/api';
 
 export default function Dashboard() {
   const router = useRouter();
   const [checked, setChecked] = React.useState([0]);
   const { authUser, isLoggedIn, isLoadingApp } = useAppContext();
 
-  const peepsQuery = useQuery(["groceriesList"], fetchList);
+  const peepsQuery = useQuery(["shoppingList"], fetchShoppingList);
 
   const handleToggle = (value) => () => {
     const currentIndex = checked.indexOf(value);
@@ -91,7 +91,7 @@ export default function Dashboard() {
             );
           })}
         </List>
-        <GroceriesDial />
+        <AddAction />
       </Box>
   );
 }

@@ -9,6 +9,7 @@ import { CacheProvider } from '@emotion/react';
 import theme from '../utils/theme';
 import createEmotionCache from '../utils/createEmotionCache';
 import { AppWrapper } from '@/context/AppContext';
+import { ReactQueryDevtools } from 'react-query/devtools'
 
 global.EventSource = eventsource;
 
@@ -30,6 +31,7 @@ export default function MyApp(props) {
           <ThemeProvider theme={theme}>
             <CssBaseline />
               {getLayout(<Component {...pageProps} />)}
+              <ReactQueryDevtools initialIsOpen={true} />
           </ThemeProvider>
         </CacheProvider>
       </AppWrapper>
