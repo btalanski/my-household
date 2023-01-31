@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useEffect } from 'react';
+import { useQuery } from "react-query";
 import { useRouter } from 'next/router'
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -16,15 +17,14 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Checkbox from '@mui/material/Checkbox';
-import IconButton from '@mui/material/IconButton';
-import CommentIcon from '@mui/icons-material/Comment';
-
+import { fetchList } from '@/hooks/useGroceriesList';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { authUser, isLoggedIn, isLoadingApp } = useAppContext();
-  
   const [checked, setChecked] = React.useState([0]);
+  const { authUser, isLoggedIn, isLoadingApp } = useAppContext();
+
+  const peepsQuery = useQuery(["groceriesList"], fetchList);
 
   const handleToggle = (value) => () => {
     const currentIndex = checked.indexOf(value);
@@ -69,31 +69,23 @@ export default function Dashboard() {
         <Typography variant="h4" component="h1" gutterBottom>
           Shopping list
         </Typography>
-        <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
-          {[0, 1, 2, 3].map((value) => {
-            const labelId = `checkbox-list-label-${value}`;
+        <List sx={{ width: '100%', maxWidth: 460, bgcolor: 'background.paper' }}>
+          {peepsQuery.data?.map((record) => {
+            const labelId = `checkbox-list-label-${record.id}`;
 
             return (
-              <ListItem
-                key={value}
-                secondaryAction={
-                  <IconButton edge="end" aria-label="comments">
-                    <CommentIcon />
-                  </IconButton>
-                }
-                disablePadding
-              >
-                <ListItemButton role={undefined} onClick={handleToggle(value)} dense>
+              <ListItem key={record.id}>
+                <ListItemButton role={undefined} onClick={handleToggle(record.id)} dense>
                   <ListItemIcon>
                     <Checkbox
                       edge="start"
-                      checked={checked.indexOf(value) !== -1}
+                      checked={checked.indexOf(record.id) !== -1}
                       tabIndex={-1}
                       disableRipple
                       inputProps={{ 'aria-labelledby': labelId }}
                     />
                   </ListItemIcon>
-                  <ListItemText id={labelId} primary={`Line item ${value + 1}`} />
+                  <ListItemText id={labelId} primary={record.item} />
                 </ListItemButton>
               </ListItem>
             );
