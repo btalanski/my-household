@@ -17,7 +17,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Checkbox from '@mui/material/Checkbox';
-import { fetchList } from '@/hooks/useGroceriesList';
+import { fetchList } from '@/utils/shoppingListCollection';
 
 export default function Dashboard() {
   const router = useRouter();

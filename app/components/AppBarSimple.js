@@ -16,7 +16,6 @@ export default function AppBarSimple() {
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               MyHousehold
             </Typography>
-          <Button color="inherit" onClick={() => router.push('/login')}>Sign in</Button>
         </Toolbar>
       </AppBar>
     </Box>

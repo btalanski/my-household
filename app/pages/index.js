@@ -11,44 +11,52 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Grid from '@mui/material/Grid';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import useLogin from '@/hooks/useLogin';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
+import LoadingButton from '@mui/lab/LoadingButton';
+import Backdrop from '@mui/material/Backdrop';
+import CircularProgress from '@mui/material/CircularProgress';
 
 export default function Index() {
   const router = useRouter();
-  const { isLoggedIn } = useAppContext();
+  const { isLoggedIn, setIsLoggedIn, isLoadingApp, authUser } = useAppContext();
+  const { mutate: login, isLoading, isError, isSuccess } = useLogin();
 
   useEffect(() => {
-    if(isLoggedIn){
+    if(isLoggedIn || isSuccess){
+      setIsLoggedIn(true);
       router.push('/dashboard');
     }
-  },[isLoggedIn]);
+  },[isLoggedIn, isSuccess]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get('email'),
-      password: data.get('password'),
-    });
+    login({ email: data.get('email'), password: data.get('password')});
   };
+
+  if(isLoadingApp){
+    return(
+      <div>
+        <Backdrop
+          sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={true}
+          transitionDuration={0}
+        >
+          <CircularProgress color="inherit" />
+        </Backdrop>
+      </div>
+    )
+  }
 
   return (
     <Container maxWidth="sm">
-      <Box sx={{
-        marginTop: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Welcome! 👋
-        </Typography>
-        <Typography component="p" gutterBottom>
-          Start by creating an account below or <Link href="/login">sign in</Link> to access your dashboard.
-        </Typography>
-      </Box>
       <Box
           sx={{
-            marginTop: 2,
+            marginTop: 8,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -58,61 +66,60 @@ export default function Index() {
             <LockOutlinedIcon />
           </Avatar>
           <Typography component="h1" variant="h5">
-            Sign up
+            Sign in
           </Typography>
-          <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  autoComplete="given-name"
-                  name="firstName"
-                  required
-                  fullWidth
-                  id="firstName"
-                  label="First Name"
-                  autoFocus
-                />
+          <Stack sx={{ width: '100%' }} spacing={2}>
+            {isError && <Alert severity="error">Account not found.</Alert>}
+            {isSuccess && <Alert severity="success">Logged in. Redirecting...</Alert>}
+          </Stack>
+          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              autoComplete="email"
+              autoFocus
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+            />
+            <FormControlLabel
+              control={<Checkbox value="remember" color="primary" />}
+              label="Remember me"
+            />
+            <Stack sx={{ width: '100%' }} spacing={2}>
+              <LoadingButton
+                loading={isLoading}
+                loadingPosition="start"
+                startIcon={<></>}
+                variant="contained"
+                type="submit"
+              >
+                <span>Sign in</span>
+              </LoadingButton>
+            </Stack>
+            <Grid container sx={{marginTop: 2}}>
+              <Grid item xs>
+                <Link href="#" variant="body2">
+                  Forgot password?
+                </Link>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  id="lastName"
-                  label="Last Name"
-                  name="lastName"
-                  autoComplete="family-name"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  id="email"
-                  label="Email Address"
-                  name="email"
-                  autoComplete="email"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  name="password"
-                  label="Password"
-                  type="password"
-                  id="password"
-                  autoComplete="new-password"
-                />
+              <Grid item>
+                <Link href="/" variant="body2">
+                  Don't have an account? Sign Up
+                </Link>
               </Grid>
             </Grid>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-            >
-              Sign Up
-            </Button>
           </Box>
         </Box>
     </Container>
