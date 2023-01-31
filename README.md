@@ -24,13 +24,11 @@ docker compose up -d
 - [x] Setup nextjs
 - [x] Setup Material UI theme
 - [x] Sign in/out with Pocketbase account
-- [ ] User sign up
 - [ ] User forgot password
 - [ ] Main dashboard layout
-- [ ] Onboarding screen on first access
-- [ ] Family account setup and management
-- [ ] Invite users to family account
+- [ ] Invite users
 - [ ] Shopping list layout
 - [ ] Shopping list management
 - [ ] To do list layout
 - [ ] To do list management
+- [ ] Onboarding screen on first access
