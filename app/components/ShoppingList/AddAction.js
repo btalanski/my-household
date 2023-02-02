@@ -18,7 +18,7 @@ export default function AddAction() {
   return (
     <>
     <AddItemDialog {...{open, handleClose}}/>
-    <Box sx={{ position: 'absolute', bottom: 80, right: 16, zIndex: 10 }}>
+    <Box sx={{ position: 'fixed', bottom: 80, right: 16, zIndex: 10 }}>
       <Fab color="primary" aria-label="add" onClick={handleClickOpen}>
         <AddIcon />
       </Fab>

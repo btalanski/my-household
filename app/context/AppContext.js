@@ -7,30 +7,33 @@ const ctx = createContext();
 
 export function AppWrapper({ children }) {  
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [authUser, setAuthUser] = useState(null);
-    const [isLoadingApp, setIsLoadingApp] = useState(true);
-    
-    const getUser = async() => await pb.authStore.model;
-    const userQuery = useQuery('user', getUser);
+    const [isLoadingApp, setIsLoadingApp] = useState(true);    
+    const authUser = useQuery('user', async() => await pb.authStore.model);
     
     useEffect(()=> { 
-        console.log(userQuery.isSuccess, pb.authStore.isValid, userQuery.data);
+        console.log(authUser.isLoading, authUser.isSuccess, authUser.isError, pb.authStore.isValid, authUser.data);
 
-        if(userQuery.isSuccess){
+        if(authUser.isLoading){
+            setIsLoadingApp(() => true);
+            return;
+        }
+
+        if(authUser.isError || authUser.isSuccess){
             setIsLoadingApp(() => false);
         }
 
-        if(pb.authStore.isValid && userQuery.data){
+        if(pb.authStore.isValid && authUser.data){
             setIsLoggedIn(() => true);
-            setAuthUser(() => userQuery.data);
+            setIsLoadingApp(() => false);
+            //setAuthUser(() => authUser.data);
         }
-    }, [pb.authStore.isValid, userQuery.isSuccess, userQuery.data]);
+    }, [pb.authStore.isValid, authUser.isLoading, authUser.isSuccess, authUser.isError, authUser.data]);
 
     const sharedState = { 
         pb,
         isLoggedIn,
         setIsLoggedIn,
-        authUser,
+        authUser: authUser.data,
         isLoadingApp,
         setIsLoadingApp
     }

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from "react-query";
-import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/router'
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -22,50 +21,9 @@ import { fetchShoppingList, subscribeToShoppingList, unsubscribeToShoppingList }
 
 export default function Dashboard() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { pb, authUser, isLoggedIn, isLoadingApp } = useAppContext();
   const [checked, setChecked] = React.useState([0]);
-  const [subscribed, setSubscribed] = React.useState(false);
-  const shoppingList = useQuery(["shoppingList"], async() => {
-    const data = await pb.collection("shopping_list").getFullList(200, {
-      expand: 'added_by',
-      sort: "-created",
-    });
-    return data;
-  });
+  const { pb, authUser, isLoggedIn, isLoadingApp } = useAppContext();
 
-  const handleToggle = (value) => () => {
-    const currentIndex = checked.indexOf(value);
-    const newChecked = [...checked];
-
-    if (currentIndex === -1) {
-      newChecked.push(value);
-    } else {
-      newChecked.splice(currentIndex, 1);
-    }
-
-    setChecked(newChecked);
-  };  
-
-  useEffect(() => {
-    if(!subscribed) {
-      console.log('subscribing to shopping_list collection');
-      pb.collection('shopping_list').subscribe('*', (event) => { 
-        console.log('shopping_list collection refreshing...', event);
-        queryClient.invalidateQueries(['shoppingList']);
-      });
-      setSubscribed(true);
-    }
-  },[]);
-
-  useEffect(() => {
-    return () => {
-      if(subscribed){
-        console.log('unsubscribing from shopping_list collection');
-        pb.collection('shopping_list').unsubscribe();
-      }
-    }
-  },[subscribed]);
 
   useEffect(() => {
     if(!isLoadingApp && !isLoggedIn){
@@ -73,7 +31,8 @@ export default function Dashboard() {
     }
   },[isLoadingApp, isLoggedIn]);
 
-  if(isLoadingApp){
+
+  if(isLoadingApp || !isLoggedIn || !authUser){
     return(
       <div>
         <Backdrop
@@ -90,19 +49,17 @@ export default function Dashboard() {
   return (
       <Box sx={{
         marginTop: 6,
-        mb: 8,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
       }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Shopping list
+          To dos
         </Typography>
         <List sx={{ width: '100%', maxWidth: 460, bgcolor: 'background.paper' }}>
-          {shoppingList.data?.map((record) => {
+          {[].map((record) => {
             const labelId = `checkbox-list-label-${record.id}`;
-            const primary = `${record.item} ${record.quantity ? '(' + record.quantity + ')' : '' }`;
-            const secondary = `${record?.expand?.added_by?.name ? 'By ' + record?.expand?.added_by?.name + ' - ' : ''} ${formatDistanceToNow(new Date(record.created))} ago`;
+
             return (
               <ListItem key={record.id}>
                 <ListItemButton role={undefined} onClick={handleToggle(record.id)} dense>
@@ -115,7 +72,7 @@ export default function Dashboard() {
                       inputProps={{ 'aria-labelledby': labelId }}
                     />
                   </ListItemIcon>
-                  <ListItemText id={labelId} primary={<Typography sx={{ fontWeight: 'bold'}}>{primary}</Typography>} secondary={secondary}/>
+                  <ListItemText id={labelId} primary={record.item} />
                 </ListItemButton>
               </ListItem>
             );

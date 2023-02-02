@@ -5,7 +5,5 @@ export const fetchShoppingList = async() => {
         sort: "-created",
     });
 
-    console.log('fetchList', data);
-
     return data;
 }

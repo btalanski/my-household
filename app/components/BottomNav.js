@@ -19,8 +19,8 @@ export default function BottomNav() {
             setValue(newValue);
             }}
         >
-            <BottomNavigationAction label="Shopping" icon={<LocalGroceryStoreIcon />} component={Link} href='/dashboard/shopping-list'/>
-            <BottomNavigationAction label="To dos" icon={<ListAltIcon />} />
+            <BottomNavigationAction label="Shopping" icon={<LocalGroceryStoreIcon />} component={Link} href='/dashboard/shopping-list' />
+            <BottomNavigationAction label="To dos" icon={<ListAltIcon />} component={Link} href='/dashboard/todos' />
             <BottomNavigationAction label="Meals" icon={<CalendarMonthIcon />} />
         </BottomNavigation>
     </Paper>
