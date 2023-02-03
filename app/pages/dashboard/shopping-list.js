@@ -21,9 +21,10 @@ import ListItemText from '@mui/material/ListItemText';
 import Checkbox from '@mui/material/Checkbox';
 
 function ItemHeader(props) {
+  const sx = {...{ fontSize: 18, fontWeight: 'bold', color: '#222'}, ...props?.isCrossed ? { textDecoration: 'line-through wavy red .15rem'} : {} };
   return (
     <>
-      <Typography component="span" sx={{ fontSize: 18, fontWeight: 'bold'}}>{props.name}</Typography>
+      <Typography component="span" sx={sx}>{props.name}</Typography>
       {props.quantity && <Typography component="span" sx={{ fontSize: 15 }}> (qty {props.quantity})</Typography>}
     </>
   )
@@ -33,8 +34,10 @@ export default function Dashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { pb, authUser, isLoggedIn, isLoadingApp } = useAppContext();
-  const [checked, setChecked] = React.useState([0]);
+  const [checkedItems, setCheckedItems] = React.useState([]);
+  const [crossedItems, setCrossedItems] = React.useState([]);
   const [subscribed, setSubscribed] = React.useState(false);
+  
   const shoppingList = useQuery(["shoppingList"], async() => {
     const data = await pb.collection("shopping_list").getFullList(200, {
       expand: 'added_by',
@@ -43,9 +46,14 @@ export default function Dashboard() {
     return data;
   });
 
-  const handleToggle = (value) => () => {
-    const currentIndex = checked.indexOf(value);
-    const newChecked = [...checked];
+  const crossCheckMutation = useMutation(async({id, isCrossed}) => {
+    return await pb.collection('shopping_list').update(id, { crossed: isCrossed });
+});
+
+  const handleCheckToggle = (value) => () => {
+    console.log('handleCheckToggle');
+    const currentIndex = checkedItems.indexOf(value);
+    const newChecked = [...checkedItems];
 
     if (currentIndex === -1) {
       newChecked.push(value);
@@ -53,8 +61,25 @@ export default function Dashboard() {
       newChecked.splice(currentIndex, 1);
     }
 
-    setChecked(newChecked);
-  };  
+    setCheckedItems(newChecked);
+  };
+  
+  const handleCrossCheck = (value) => () => {
+    console.log('handleCrossCheck');
+    const currentIndex = crossedItems.indexOf(value);
+    const newCrossed = [...crossedItems];
+    
+    if (currentIndex === -1) {
+      newCrossed.push(value);
+      crossCheckMutation.mutate({id: value, isCrossed: true});
+    } else {
+      newCrossed.splice(currentIndex, 1);
+      crossCheckMutation.mutate({id: value, isCrossed: false});
+    }
+    
+    setCrossedItems(newCrossed);
+
+  };
 
   useEffect(() => {
     if(!subscribed) {
@@ -110,7 +135,8 @@ export default function Dashboard() {
         <List sx={{ width: '100%', maxWidth: 580, bgcolor: 'background.paper' }}>
           {shoppingList.data?.map((record) => {
             const labelId = `checkbox-list-label-${record.id}`;
-            const primary = <ItemHeader name={record.item} quantity={record.quantity}></ItemHeader>;
+            const isCrossed = crossedItems.indexOf(record.id) !== -1 || record.crossed;
+            const primary = <ItemHeader name={record.item} quantity={record.quantity} isCrossed={isCrossed}></ItemHeader>;
             const secondary = `${record?.expand?.added_by?.name ? 'By ' + record?.expand?.added_by?.name + ' - ' : ''} ${formatDistanceToNow(new Date(record.created))} ago`;
 
             return (
@@ -124,14 +150,15 @@ export default function Dashboard() {
                 disablePadding
                 divider
               >
-                <ListItemButton role={undefined} onClick={handleToggle(record.id)}>
+                <ListItemButton role={undefined} onClick={handleCrossCheck(record.id)}>
                   <ListItemIcon>
                     <Checkbox
                       edge="start"
-                      checked={checked.indexOf(record.id) !== -1}
+                      checked={checkedItems.indexOf(record.id) !== -1}
                       tabIndex={-1}
                       disableRipple
                       inputProps={{ 'aria-labelledby': labelId }}
+                      onClick={handleCheckToggle(record.id)}
                     />
                   </ListItemIcon>
                   <ListItemText id={labelId} primary={primary} secondary={secondary}/>
