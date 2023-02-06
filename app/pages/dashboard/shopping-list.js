@@ -19,6 +19,10 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Checkbox from '@mui/material/Checkbox';
+import { pb } from '@/utils/pocketbase';
+import Skeleton from '@mui/material/Skeleton';
+import Button from '@mui/material/Button';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 function ItemHeader(props) {
   const sx = {...{ fontSize: 18, fontWeight: 'bold', color: '#222'}, ...props?.isCrossed ? { textDecoration: 'line-through wavy red .15rem'} : {} };
@@ -33,7 +37,7 @@ function ItemHeader(props) {
 export default function Dashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { pb, authUser, isLoggedIn, isLoadingApp } = useAppContext();
+  const { authUser, isLoggedIn, isLoadingApp, setIsLoadingApp } = useAppContext();
   const [checkedItems, setCheckedItems] = React.useState([]);
   const [crossedItems, setCrossedItems] = React.useState([]);
   const [subscribed, setSubscribed] = React.useState(false);
@@ -47,7 +51,7 @@ export default function Dashboard() {
   });
 
   const crossCheckMutation = useMutation(async({id, isCrossed}) => {
-    return await pb.collection('shopping_list').update(id, { crossed: isCrossed });
+    await pb.collection('shopping_list').update(id, { crossed: isCrossed });
 });
 
   const handleCheckToggle = (value) => () => {
@@ -63,26 +67,52 @@ export default function Dashboard() {
 
     setCheckedItems(newChecked);
   };
+
+  const handleDelete = () => {
+    console.log('handleDelete');
+
+  };
   
   const handleCrossCheck = (value) => () => {
-    console.log('handleCrossCheck');
     const currentIndex = crossedItems.indexOf(value);
     const newCrossed = [...crossedItems];
-    
+    let isCrossed = true;
+
     if (currentIndex === -1) {
       newCrossed.push(value);
-      crossCheckMutation.mutate({id: value, isCrossed: true});
     } else {
       newCrossed.splice(currentIndex, 1);
-      crossCheckMutation.mutate({id: value, isCrossed: false});
+      isCrossed = false;
     }
-    
     setCrossedItems(newCrossed);
+    crossCheckMutation.mutate({id: value, isCrossed});
 
   };
 
   useEffect(() => {
-    if(!subscribed) {
+    if(!isLoadingApp && !isLoggedIn){
+      router.push('/');
+    }
+  },[isLoadingApp, isLoggedIn]);
+
+  useEffect(() => {
+      if(crossedItems.length == 0 && shoppingList?.data?.length > 0){
+        const ids = shoppingList.data.filter(({ crossed }) => crossed).map(({ id }) => id) || [];
+        setCrossedItems(() => ids);
+      }
+  },[shoppingList.data, crossedItems]);
+
+  useEffect(() => {
+    return () => {
+      if(subscribed){
+        console.log('unsubscribing from shopping_list collection');
+        pb.collection('shopping_list').unsubscribe().catch((err) => {console.log(err, err.originalError)});
+      }
+    }
+  },[subscribed]);
+
+  useEffect(() => {
+    if(!isLoadingApp && isLoggedIn && !subscribed) {
       console.log('subscribing to shopping_list collection');
       pb.collection('shopping_list').subscribe('*', (event) => { 
         console.log('shopping_list collection refreshing...', event);
@@ -90,22 +120,7 @@ export default function Dashboard() {
       });
       setSubscribed(true);
     }
-  },[]);
-
-  useEffect(() => {
-    return () => {
-      if(subscribed){
-        console.log('unsubscribing from shopping_list collection');
-        pb.collection('shopping_list').unsubscribe();
-      }
-    }
-  },[subscribed]);
-
-  useEffect(() => {
-    if(!isLoadingApp && !isLoggedIn){
-      router.push('/');
-    }
-  },[isLoadingApp, isLoggedIn]);
+  },[isLoadingApp, isLoggedIn, subscribed]);
 
   if(isLoadingApp){
     return(
@@ -129,13 +144,19 @@ export default function Dashboard() {
         flexDirection: 'column',
         alignItems: 'center',
       }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Shopping list
-        </Typography>
+        <Typography variant="h4" component="h1" gutterBottom>Shopping list</Typography>
+        {checkedItems.length > 0 && <Box>
+          <Button variant="outlined" startIcon={<DeleteIcon />} onClick={handleDelete}>
+            Delete selected
+          </Button>
+        </Box>}
+        { shoppingList.isLoading && <Box sx={{ width: '100%', maxWidth: 580 }}>
+          {[0,1,2,3,4,5].map((value) => (<Skeleton key={`sk_${value}`} variant="rectangular" animation="wave" height={56} sx={{ margin: 1}} />))}
+        </Box>}
         <List sx={{ width: '100%', maxWidth: 580, bgcolor: 'background.paper' }}>
           {shoppingList.data?.map((record) => {
             const labelId = `checkbox-list-label-${record.id}`;
-            const isCrossed = crossedItems.indexOf(record.id) !== -1 || record.crossed;
+            const isCrossed = record.crossed || crossedItems.indexOf(record.id) !== -1;
             const primary = <ItemHeader name={record.item} quantity={record.quantity} isCrossed={isCrossed}></ItemHeader>;
             const secondary = `${record?.expand?.added_by?.name ? 'By ' + record?.expand?.added_by?.name + ' - ' : ''} ${formatDistanceToNow(new Date(record.created))} ago`;
 
@@ -143,14 +164,16 @@ export default function Dashboard() {
               <ListItem 
                 key={record.id}
                 secondaryAction={
-                  <IconButton edge="end" aria-label="edit">
-                    <ModeEditOutlineIcon />
-                  </IconButton>
+                  <>
+                    <IconButton edge="end" aria-label="edit">
+                      <ModeEditOutlineIcon />
+                    </IconButton>
+                  </>
                 }
                 disablePadding
                 divider
               >
-                <ListItemButton role={undefined} onClick={handleCrossCheck(record.id)}>
+                <ListItemButton role={undefined}>
                   <ListItemIcon>
                     <Checkbox
                       edge="start"
@@ -161,7 +184,7 @@ export default function Dashboard() {
                       onClick={handleCheckToggle(record.id)}
                     />
                   </ListItemIcon>
-                  <ListItemText id={labelId} primary={primary} secondary={secondary}/>
+                  <ListItemText id={labelId} primary={primary} secondary={secondary} onClick={handleCrossCheck(record.id)}/>
                 </ListItemButton>
               </ListItem>
             );
