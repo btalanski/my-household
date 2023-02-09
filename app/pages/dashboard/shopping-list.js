@@ -20,9 +20,11 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Checkbox from '@mui/material/Checkbox';
 import { pb } from '@/utils/pocketbase';
-import Skeleton from '@mui/material/Skeleton';
-import Button from '@mui/material/Button';
-import DeleteIcon from '@mui/icons-material/Delete';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import BottomNav from '@/components/BottomNav';
+import SkeletonList from '@/components/ShoppingList/SkeletonList';
+import DeleteItemsBar from '@/components/ShoppingList/DeleteItemsBar';
 
 function ItemHeader(props) {
   const sx = {...{ fontSize: 18, fontWeight: 'bold', color: '#222'}, ...props?.isCrossed ? { textDecoration: 'line-through wavy red .15rem'} : {} };
@@ -52,7 +54,11 @@ export default function Dashboard() {
 
   const crossCheckMutation = useMutation(async({id, isCrossed}) => {
     await pb.collection('shopping_list').update(id, { crossed: isCrossed });
-});
+  });
+
+  const deleteMutation = useMutation(async({id}) => {
+    await pb.collection('shopping_list').delete(id);
+  });
 
   const handleCheckToggle = (value) => () => {
     console.log('handleCheckToggle');
@@ -69,8 +75,11 @@ export default function Dashboard() {
   };
 
   const handleDelete = () => {
-    console.log('handleDelete');
-
+    for(let i = 0; i < checkedItems.length; i++){
+      deleteMutation.mutate({id: checkedItems[i] });
+    }
+    queryClient.invalidateQueries(['shoppingList']);
+    setCheckedItems([]);
   };
   
   const handleCrossCheck = (value) => () => {
@@ -137,22 +146,25 @@ export default function Dashboard() {
   }
 
   return (
-      <Box sx={{
-        marginTop: 6,
+      <>
+      <Box sx={{ flexGrow: 1, display: 'flex' }}>
+        <AppBar component="nav">
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              Shopping List
+            </Typography>
+          </Toolbar>
+        </AppBar>
+      </Box>
+      {checkedItems.length > 0 && <DeleteItemsBar selectedItems={checkedItems} deleteCallback={handleDelete}></DeleteItemsBar>}
+      <Box component="main" sx={{
+        marginTop: 10,
         mb: 8,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
       }}>
-        <Typography variant="h4" component="h1" gutterBottom>Shopping list</Typography>
-        {checkedItems.length > 0 && <Box>
-          <Button variant="outlined" startIcon={<DeleteIcon />} onClick={handleDelete}>
-            Delete selected
-          </Button>
-        </Box>}
-        { shoppingList.isLoading && <Box sx={{ width: '100%', maxWidth: 580 }}>
-          {[0,1,2,3,4,5].map((value) => (<Skeleton key={`sk_${value}`} variant="rectangular" animation="wave" height={56} sx={{ margin: 1}} />))}
-        </Box>}
+        {shoppingList.isLoading && <SkeletonList />}
         <List sx={{ width: '100%', maxWidth: 580, bgcolor: 'background.paper' }}>
           {shoppingList.data?.map((record) => {
             const labelId = `checkbox-list-label-${record.id}`;
@@ -192,11 +204,7 @@ export default function Dashboard() {
         </List>
         <AddAction />
       </Box>
+      <BottomNav />
+      </>
   );
-}
-
-Dashboard.getLayout = function getLayout(page) {
-  return (
-    <LayoutUser>{page}</LayoutUser>
-  )
 }
