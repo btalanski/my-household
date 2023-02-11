@@ -6,7 +6,7 @@ import { useRouter } from 'next/router'
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import { useAppContext } from '@/context/AppContext';
+import useLoggedUser from '@/hooks/useLoggedUser';
 import LayoutUser from '@/components/LayoutUser';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -27,7 +27,7 @@ import SkeletonList from '@/components/ShoppingList/SkeletonList';
 import DeleteItemsBar from '@/components/ShoppingList/DeleteItemsBar';
 
 function ItemHeader(props) {
-  const sx = {...{ fontSize: 18, fontWeight: 'bold', color: '#222'}, ...props?.isCrossed ? { textDecoration: 'line-through wavy red .15rem'} : {} };
+  const sx = {...{ fontSize: 18, fontWeight: 'bold', color: '#222'}, ...props?.isCrossed ? { textDecoration: 'line-through wavy red', textDecorationThickness: '.15rem' } : {} };
   return (
     <>
       <Typography component="span" sx={sx}>{props.name}</Typography>
@@ -36,32 +36,35 @@ function ItemHeader(props) {
   )
 }
 
+const getShoppingList = async() => {
+  const data = await pb.collection("shopping_list").getFullList(200, {
+    expand: 'added_by',
+    sort: "-created",
+  });
+  return data;
+}
+
+const crossCheckItem = async({id, isCrossed}) => {
+  await pb.collection('shopping_list').update(id, { crossed: isCrossed });
+}
+
+const deleteItem = async({id}) => {
+  await pb.collection('shopping_list').delete(id);
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { authUser, isLoggedIn, isLoadingApp, setIsLoadingApp } = useAppContext();
+  const user = useLoggedUser();
   const [checkedItems, setCheckedItems] = React.useState([]);
   const [crossedItems, setCrossedItems] = React.useState([]);
+  const [deletedItems, setDeletedItems] = React.useState([]);
   const [subscribed, setSubscribed] = React.useState(false);
-  
-  const shoppingList = useQuery(["shoppingList"], async() => {
-    const data = await pb.collection("shopping_list").getFullList(200, {
-      expand: 'added_by',
-      sort: "-created",
-    });
-    return data;
-  });
-
-  const crossCheckMutation = useMutation(async({id, isCrossed}) => {
-    await pb.collection('shopping_list').update(id, { crossed: isCrossed });
-  });
-
-  const deleteMutation = useMutation(async({id}) => {
-    await pb.collection('shopping_list').delete(id);
-  });
+  const shoppingList = useQuery(["shoppingList"], getShoppingList);
+  const crossCheckMutation = useMutation(crossCheckItem);
+  const deleteMutation = useMutation(deleteItem);
 
   const handleCheckToggle = (value) => () => {
-    console.log('handleCheckToggle');
     const currentIndex = checkedItems.indexOf(value);
     const newChecked = [...checkedItems];
 
@@ -75,10 +78,12 @@ export default function Dashboard() {
   };
 
   const handleDelete = () => {
+    setDeletedItems(checkedItems);
+    
     for(let i = 0; i < checkedItems.length; i++){
-      deleteMutation.mutate({id: checkedItems[i] });
+      deleteMutation.mutate({ id: checkedItems[i] });
     }
-    queryClient.invalidateQueries(['shoppingList']);
+
     setCheckedItems([]);
   };
   
@@ -94,22 +99,22 @@ export default function Dashboard() {
       isCrossed = false;
     }
     setCrossedItems(newCrossed);
-    crossCheckMutation.mutate({id: value, isCrossed});
+    crossCheckMutation.mutate({ id: value, isCrossed });
 
   };
 
   useEffect(() => {
-    if(!isLoadingApp && !isLoggedIn){
+    if(!user.isLoading && !user.data){
       router.push('/');
     }
-  },[isLoadingApp, isLoggedIn]);
+  },[user.isLoading, user.data]);
 
   useEffect(() => {
-      if(crossedItems.length == 0 && shoppingList?.data?.length > 0){
-        const ids = shoppingList.data.filter(({ crossed }) => crossed).map(({ id }) => id) || [];
-        setCrossedItems(() => ids);
+      if(shoppingList.data?.length > 0){
+        const ids = shoppingList.data.filter(({ crossed }) => crossed).map(({ id }) => id);
+        if(ids.length > 0) setCrossedItems(() => ids);
       }
-  },[shoppingList.data, crossedItems]);
+  },[shoppingList.data]);
 
   useEffect(() => {
     return () => {
@@ -121,7 +126,7 @@ export default function Dashboard() {
   },[subscribed]);
 
   useEffect(() => {
-    if(!isLoadingApp && isLoggedIn && !subscribed) {
+    if(user.data && !subscribed) {
       console.log('subscribing to shopping_list collection');
       pb.collection('shopping_list').subscribe('*', (event) => { 
         console.log('shopping_list collection refreshing...', event);
@@ -129,9 +134,9 @@ export default function Dashboard() {
       });
       setSubscribed(true);
     }
-  },[isLoadingApp, isLoggedIn, subscribed]);
+  },[user.data, subscribed]);
 
-  if(isLoadingApp){
+  if(user.isLoading){
     return(
       <div>
         <Backdrop
@@ -166,7 +171,7 @@ export default function Dashboard() {
       }}>
         {shoppingList.isLoading && <SkeletonList />}
         <List sx={{ width: '100%', maxWidth: 580, bgcolor: 'background.paper' }}>
-          {shoppingList.data?.map((record) => {
+          {shoppingList.data?.filter(({id}) => deletedItems.indexOf(id) === -1).map((record) => {
             const labelId = `checkbox-list-label-${record.id}`;
             const isCrossed = record.crossed || crossedItems.indexOf(record.id) !== -1;
             const primary = <ItemHeader name={record.item} quantity={record.quantity} isCrossed={isCrossed}></ItemHeader>;

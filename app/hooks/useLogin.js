@@ -1,10 +1,12 @@
-import { useMutation } from "react-query";
+import { useMutation, useQueryClient } from "react-query";
 import { pb } from '@/utils/pocketbase';
 
 export default function useLogin() {
-    async function login({email, password}) {
+    const queryClient = useQueryClient();
+
+    const login = async ({email, password}) => {
         try{
-            const authData = await pb
+            await pb
                 .collection('users')
                 .authWithPassword(email, password);
         } catch(e) {
@@ -12,5 +14,9 @@ export default function useLogin() {
         }
     }
 
-    return useMutation(login)
+    const onSuccess = () => {
+        queryClient.invalidateQueries(['user']);
+    }
+
+    return useMutation(login, { onSuccess });
 }

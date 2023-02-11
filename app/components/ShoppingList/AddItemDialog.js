@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useMutation } from "react-query";
 import { pb } from '@/utils/pocketbase';
-import { useAppContext } from '@/context/AppContext';
+import useLoggedUser from '@/hooks/useLoggedUser';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -14,32 +14,57 @@ import Slide from '@mui/material/Slide';
 import TextField from '@mui/material/TextField';
 import Stack from '@mui/material/Stack';
 import LoadingButton from '@mui/lab/LoadingButton';
+import MuiAlert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
-  return <Slide direction="up" ref={ref} {...props} />;
+    return <Slide direction="up" ref={ref} {...props} />;
 });
 
+const Alert = React.forwardRef(function Alert(props, ref) {
+    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
+  
+
 export default function AddItemDialog(props) {
-    const { open, handleClose } = props;
-    const { authUser } = useAppContext();
+    const { open, handleClose } = props;    
+    const user = useLoggedUser();
+    const [openAlert, setOpenAlert] = React.useState(false);
+
+    const handleCloseAlert = (event, reason) => {
+        if (reason === 'clickaway') {
+        return;
+        }
+
+        setOpenAlert(false);
+    };
 
     const mutation = useMutation(async(data) => {
         return await pb.collection('shopping_list').create(data);
     }, {
-        onSuccess: (data, variables, context) => {
+        onSuccess: () => {
             handleClose();
+        },
+        onError: () => {
+            setOpenAlert(true);
         }
     });
 
     const handleSubmit = (event) => {
         event.preventDefault();
+
+        if(!user.data){
+            setOpenAlert(true);
+            return;
+        }
+
         const data = new FormData(event.currentTarget);
 
         const newEntry = {
             item: data.get('name'),
             quantity: data.get('quantity'),
             note: data.get('note') ?? '',
-            added_by: authUser.id,
+            added_by: user.data.id,
         };
 
         mutation.mutate(newEntry);
@@ -86,7 +111,6 @@ export default function AddItemDialog(props) {
               id="quantity"
               label="Quantity"
               name="quantity"
-              autoFocus
               variant="filled"
               helperText={"Example: 1lb, 1L, 5"}
             />
@@ -103,6 +127,11 @@ export default function AddItemDialog(props) {
               </LoadingButton>
             </Stack>
         </Box>
+        <Snackbar open={openAlert} autoHideDuration={6000} onClose={handleCloseAlert}>
+            <Alert onClose={handleCloseAlert} severity="error" sx={{ width: '100%' }}>
+                Error completing request
+            </Alert>
+        </Snackbar>
     </Dialog>
     );
 }

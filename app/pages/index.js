@@ -12,6 +12,7 @@ import TextField from '@mui/material/TextField';
 import Grid from '@mui/material/Grid';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import useLogin from '@/hooks/useLogin';
+import useLoggedUser from '@/hooks/useLoggedUser';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Alert from '@mui/material/Alert';
@@ -22,15 +23,14 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 export default function Index() {
   const router = useRouter();
-  const { isLoggedIn, setIsLoggedIn, isLoadingApp, authUser } = useAppContext();
   const { mutate: login, isLoading, isError, isSuccess } = useLogin();
+  const user = useLoggedUser();
 
   useEffect(() => {
-    if(isLoggedIn || isSuccess){
-      setIsLoggedIn(true);
-      router.push('/dashboard');
+    if (!user.isLoading && user.data) {
+      router.push('/dashboard/shopping-list');
     }
-  },[isLoggedIn, isSuccess]);
+  }, [user.isLoading, user.data]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -38,7 +38,7 @@ export default function Index() {
     login({ email: data.get('email'), password: data.get('password')});
   };
 
-  if(isLoadingApp){
+  if(user.isLoading){
     return(
       <div>
         <Backdrop
