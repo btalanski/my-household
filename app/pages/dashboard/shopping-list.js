@@ -3,11 +3,9 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from "react-query";
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/router'
-import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import useLoggedUser from '@/hooks/useLoggedUser';
-import LayoutUser from '@/components/LayoutUser';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
 import AddAction from '@/components/ShoppingList/AddAction';
@@ -25,6 +23,7 @@ import Toolbar from '@mui/material/Toolbar';
 import BottomNav from '@/components/BottomNav';
 import SkeletonList from '@/components/ShoppingList/SkeletonList';
 import DeleteItemsBar from '@/components/ShoppingList/DeleteItemsBar';
+import EditItemDialog from '@/components/ShoppingList/EditItemDialog';
 
 function ItemHeader(props) {
   const sx = {...{ fontSize: 18, fontWeight: 'bold', color: '#222'}, ...props?.isCrossed ? { textDecoration: 'line-through wavy red', textDecorationThickness: '.15rem' } : {} };
@@ -60,6 +59,7 @@ export default function Dashboard() {
   const [crossedItems, setCrossedItems] = React.useState([]);
   const [deletedItems, setDeletedItems] = React.useState([]);
   const [subscribed, setSubscribed] = React.useState(false);
+  const [editingItem, setEditingItem] = React.useState({ open: false, itemId: null });
   const shoppingList = useQuery(["shoppingList"], getShoppingList);
   const crossCheckMutation = useMutation(crossCheckItem);
   const deleteMutation = useMutation(deleteItem);
@@ -93,6 +93,14 @@ export default function Dashboard() {
     crossCheckMutation.mutate({ id: value, isCrossed });
   };
 
+  const handleToggleEdit = (itemId) => () => {
+    setEditingItem({open: true, itemId});
+  }
+
+  const handleEditClose = () => {
+    setEditingItem({open: false});
+  }
+
   useEffect(() => {
     if(!user.isLoading && !user.data){
       router.push('/');
@@ -103,7 +111,7 @@ export default function Dashboard() {
   useEffect(() => {
       if(shoppingList.data?.length > 0){
         const ids = shoppingList.data.filter(({ crossed }) => crossed).map(({ id }) => id);
-        if(ids.length > 0) setCrossedItems(() => ids);
+        if(ids.length > 0) setCrossedItems(ids);
       }
   },[shoppingList.data]);
 
@@ -161,6 +169,7 @@ export default function Dashboard() {
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               Shopping List
             </Typography>
+            {shoppingList.data?.length > 0 && <Typography component="div">{`${shoppingList.data.length} items`}</Typography>}
           </Toolbar>
         </AppBar>
       </Box>
@@ -179,17 +188,11 @@ export default function Dashboard() {
             const isCrossed = crossedItems.indexOf(record.id) !== -1;
             const primary = <ItemHeader name={record.item} quantity={record.quantity} isCrossed={isCrossed}></ItemHeader>;
             const secondary = `${record?.expand?.added_by?.name ? 'By ' + record?.expand?.added_by?.name + ' - ' : ''} ${formatDistanceToNow(new Date(record.created))} ago`;
-
+            const editButton = <IconButton sx={{marginRight: .35}}edge="end" aria-label="edit" disabled={isCrossed} onClick={handleToggleEdit(record.id)}><ModeEditOutlineIcon /></IconButton>;
             return (
               <ListItem 
                 key={record.id}
-                secondaryAction={
-                  <>
-                    <IconButton edge="end" aria-label="edit">
-                      <ModeEditOutlineIcon />
-                    </IconButton>
-                  </>
-                }
+                secondaryAction={editButton}
                 disablePadding
                 divider
               >
@@ -211,6 +214,7 @@ export default function Dashboard() {
           })}
         </List>
         <AddAction />
+        {editingItem.open && <EditItemDialog itemId={editingItem.itemId} handleClose={handleEditClose}/>}
       </Box>
       <BottomNav />
       </>
