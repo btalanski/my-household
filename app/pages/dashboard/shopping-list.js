@@ -65,42 +65,32 @@ export default function Dashboard() {
   const deleteMutation = useMutation(deleteItem);
 
   const handleCheckToggle = (value) => () => {
-    const currentIndex = checkedItems.indexOf(value);
-    const newChecked = [...checkedItems];
-
-    if (currentIndex === -1) {
-      newChecked.push(value);
-    } else {
-      newChecked.splice(currentIndex, 1);
-    }
-
-    setCheckedItems(newChecked);
+    setCheckedItems((prevState) => {
+      if (prevState.indexOf(value) === -1) {
+        return [...prevState, value];
+      }
+      return prevState.filter((item) => item !== value);
+    })
   };
 
   const handleDelete = () => {
-    setDeletedItems(checkedItems);
-    
-    for(let i = 0; i < checkedItems.length; i++){
-      deleteMutation.mutate({ id: checkedItems[i] });
-    }
-
     setCheckedItems([]);
+    setDeletedItems(checkedItems);
   };
   
   const handleCrossCheck = (value) => () => {
-    const currentIndex = crossedItems.indexOf(value);
-    const newCrossed = [...crossedItems];
+    let newCrossed;
     let isCrossed = true;
 
-    if (currentIndex === -1) {
-      newCrossed.push(value);
+    if (crossedItems.indexOf(value) === -1) {
+      newCrossed = [...crossedItems, value];
     } else {
-      newCrossed.splice(currentIndex, 1);
+      newCrossed = crossedItems.filter((item) => item !== value);
       isCrossed = false;
     }
+
     setCrossedItems(newCrossed);
     crossCheckMutation.mutate({ id: value, isCrossed });
-
   };
 
   useEffect(() => {
@@ -109,6 +99,7 @@ export default function Dashboard() {
     }
   },[user.isLoading, user.data]);
 
+  // Update state with crossed items ids from db
   useEffect(() => {
       if(shoppingList.data?.length > 0){
         const ids = shoppingList.data.filter(({ crossed }) => crossed).map(({ id }) => id);
@@ -116,6 +107,7 @@ export default function Dashboard() {
       }
   },[shoppingList.data]);
 
+  // Cancel active subscription to collection
   useEffect(() => {
     return () => {
       if(subscribed){
@@ -125,6 +117,7 @@ export default function Dashboard() {
     }
   },[subscribed]);
 
+  // Subscribe for realtime updates from collection
   useEffect(() => {
     if(user.data && !subscribed) {
       console.log('subscribing to shopping_list collection');
@@ -135,6 +128,16 @@ export default function Dashboard() {
       setSubscribed(true);
     }
   },[user.data, subscribed]);
+
+  // Delete selected items from db
+  useEffect(() => {
+    if(deletedItems.length > 0) {
+      console.log('delete');
+      for(let i = 0; i < deletedItems.length; i++){
+        deleteMutation.mutate({ id: deletedItems[i] });
+      }
+    }
+  },[deletedItems]);
 
   if(user.isLoading){
     return(
@@ -173,7 +176,7 @@ export default function Dashboard() {
         <List sx={{ width: '100%', maxWidth: 580, bgcolor: 'background.paper' }}>
           {shoppingList.data?.filter(({id}) => deletedItems.indexOf(id) === -1).map((record) => {
             const labelId = `checkbox-list-label-${record.id}`;
-            const isCrossed = record.crossed || crossedItems.indexOf(record.id) !== -1;
+            const isCrossed = crossedItems.indexOf(record.id) !== -1;
             const primary = <ItemHeader name={record.item} quantity={record.quantity} isCrossed={isCrossed}></ItemHeader>;
             const secondary = `${record?.expand?.added_by?.name ? 'By ' + record?.expand?.added_by?.name + ' - ' : ''} ${formatDistanceToNow(new Date(record.created))} ago`;
 
