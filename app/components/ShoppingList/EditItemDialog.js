@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { useMutation } from "react-query";
 import { pb } from '@/utils/pocketbase';
+import { useQuery, useQueryClient, useMutation } from "react-query";
 import useLoggedUser from '@/hooks/useLoggedUser';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
@@ -15,6 +15,15 @@ import Stack from '@mui/material/Stack';
 import LoadingButton from '@mui/lab/LoadingButton';
 import MuiAlert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import Backdrop from '@mui/material/Backdrop';
+import CircularProgress from '@mui/material/CircularProgress';
+
+const getShoppingListItem = async(recordId) => {
+    const data = await pb.collection("shopping_list").getOne(recordId, {
+      expand: 'added_by',
+    });
+    return data;
+  }
 
 const Transition = React.forwardRef(function Transition(props, ref) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -29,48 +38,51 @@ const defaultAlertState = { isOpen: false, isError: false, msg: ''};
 export default function EditItemDialog(props) {
     const { itemId, handleClose } = props;    
     const user = useLoggedUser();
+    const item = useQuery(["shoppingList", itemId], () => getShoppingListItem(itemId));
     const [alertState, setAlertState] = React.useState(defaultAlertState);
 
-    const handleCloseAlert = (event, reason) => {
-        if (reason === 'clickaway') {
-        return;
-        }
-
-        setOpenAlert(defaultAlertState);
-    };
-
     const mutation = useMutation(async(data) => {
-        return await pb.collection('shopping_list').create(data);
+        // return await pb.collection('shopping_list').create(data);
     }, {
         onSuccess: () => {
-            setOpenAlert({ isOpen: true, isError: false, msg: 'Updated successfully.'});
+            setAlertState({ isOpen: true, isError: false, msg: 'Updated successfully.'});
         },
         onError: () => {
-            setOpenAlert({ isOpen: true, isError: true, msg: 'An error ocurred. Please try again in a moment.'});
+            setAlertState({ isOpen: true, isError: true, msg: 'An error ocurred. Please try again in a moment.'});
         }
     });
-
+    
     const handleSubmit = (event) => {
         event.preventDefault();
 
         if(!user.data){
-            setOpenAlert({ isOpen: true, isError: true, msg: 'An error ocurred. Please try again in a moment.'});
+            setAlertState({ isOpen: true, isError: true, msg: 'An error ocurred. Please try again in a moment.'});
             return;
         }
 
         return;
-        
-        const data = new FormData(event.currentTarget);
-
-        const updatedEntry = {
-            item: data.get('name'),
-            quantity: data.get('quantity'),
-            note: data.get('note') ?? '',
-            added_by: user.data.id,
-        };
-
-        mutation.mutate(updatedEntry);
     };
+
+    const handleCloseAlert = (_, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setAlertState(defaultAlertState);
+    };
+
+    if(item.isLoading){
+        return(
+            <div>
+                <Backdrop
+                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                open={true}
+                transitionDuration={0}
+                >
+                <CircularProgress color="inherit" />
+                </Backdrop>
+            </div>
+        )
+    }
 
     return (
     <Dialog
